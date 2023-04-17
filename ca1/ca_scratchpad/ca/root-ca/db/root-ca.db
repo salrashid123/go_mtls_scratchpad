@@ -1,0 +1,4 @@
+V	330416120250Z		01	unknown	/C=US/O=Collaborator 1/OU=Enterprise/CN=Collaborator 1 Root CA
+V	330416120656Z		02	unknown	/C=US/O=Google/OU=Enterprise/CN=tee.collaborator1.com
+V	330416120901Z		03	unknown	/L=US/O=Google/OU=Enterprise/CN=client.collaborator1.com
+R	330416121006Z	230417121038Z	04	unknown	/L=US/O=Google/OU=Enterprise/CN=revoked.collaborator1.com
