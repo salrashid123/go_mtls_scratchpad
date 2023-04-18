@@ -255,3 +255,84 @@ if you would rather only send back the Client Cert CA that is appropriate for th
 			return nil, nil
 		},
 	}
+  ```
+
+  Finally, if you want to exclude an endpoint/sni for client cert enforcement on the same listener,its a bit more complicated:
+
+
+  ```golang
+
+func eventsMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/healthz" && len(r.TLS.VerifiedChains) == 0 {
+			http.Error(w, "only /healthz endpoint is allowed without client certificates", http.StatusBadRequest)
+			return
+		}
+		event := &event{
+			PeerCertificates: r.TLS.PeerCertificates,
+		}
+		ctx := context.WithValue(r.Context(), contextEventKey, *event)
+		h.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func healthhandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "ok")
+}
+
+
+func main() {
+
+	router := mux.NewRouter()
+	router.Methods(http.MethodGet).Path("/").HandlerFunc(gethandler)
+	router.Methods(http.MethodGet).Path("/healthz").HandlerFunc(healthhandler)
+
+	client1_root_pool := x509.NewCertPool()
+	client1_root_pool.AppendCertsFromPEM(client1_root)
+
+	client2_root_pool := x509.NewCertPool()
+	client2_root_pool.AppendCertsFromPEM(client2_root)
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{default_server_certs},
+		MinVersion:   tls.VersionTLS13,
+		GetConfigForClient: func(ci *tls.ClientHelloInfo) (*tls.Config, error) {
+			if ci.ServerName == "tee.operator.com" {
+				return &tls.Config{
+					MinVersion: tls.VersionTLS13,
+					GetCertificate: func(ci *tls.ClientHelloInfo) (*tls.Certificate, error) {
+						return &default_server_certs, nil
+					},
+				}, nil
+			}
+			if ci.ServerName == "tee.collaborator1.com" {
+				return &tls.Config{
+					MinVersion: tls.VersionTLS13,
+					ClientAuth: tls.RequireAndVerifyClientCert,
+					ClientCAs:  client1_root_pool,
+					GetCertificate: func(ci *tls.ClientHelloInfo) (*tls.Certificate, error) {
+						return &server1_cert, nil
+					},
+				}, nil
+			}
+
+			if ci.ServerName == "tee.collaborator2.com" {
+				return &tls.Config{
+					MinVersion: tls.VersionTLS13,
+					ClientAuth: tls.RequireAndVerifyClientCert,
+					ClientCAs:  client2_root_pool,
+					GetCertificate: func(ci *tls.ClientHelloInfo) (*tls.Certificate, error) {
+						return &server2_cert, nil
+					},
+				}, nil
+			}
+			return nil, nil
+		},
+	}
+  ```
+
+with the config above, only the endpoint `/healthz` with  `sni=tee.operator.com` is excluded from client-cert enforcement
+
+```bash
+curl -v  k  --resolve  tee.operator.com:8081:127.0.0.1 https://tee.operator.com:8081/healthz
+```
