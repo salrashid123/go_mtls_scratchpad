@@ -115,6 +115,8 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+	} else {
+		w = os.Stdout
 	}
 
 	// *****************************************
