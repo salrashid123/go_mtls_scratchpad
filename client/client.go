@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -41,7 +42,6 @@ func main() {
 		RootCAs:      serverCertPool,
 		Certificates: []tls.Certificate{cert1},
 		MinVersion:   tls.VersionTLS13,
-
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 			for _, rawCert := range rawCerts {
 				c, err := x509.ParseCertificate(rawCert)
@@ -64,9 +64,6 @@ func main() {
 			}
 			return nil
 		},
-		VerifyConnection: func(cs tls.ConnectionState) error {
-			return nil
-		},
 	}
 
 	tr := &http.Transport{
@@ -79,6 +76,15 @@ func main() {
 			if err != nil {
 				return conn, err
 			}
+			cs := conn.ConnectionState()
+
+			ekm, err := cs.ExportKeyingMaterial("my_nonce", nil, 32)
+			if err != nil {
+				fmt.Errorf("ExportKeyingMaterial failed: %v\n", err)
+				return nil, err
+			}
+			fmt.Printf("EKM my_nonce: %s\n", hex.EncodeToString(ekm))
+
 			host, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
 			ip := net.ParseIP(host)
 			fmt.Printf("Connected to IP: %s\n", ip)

@@ -103,6 +103,22 @@ also see
 * [Certificate Bound Tokens using Security Token Exchange Server (STS)](https://github.com/salrashid123/cert_bound_sts_server)
 * [Envoy WASM and LUA filters for Certificate Bound Tokens](https://github.com/salrashid123/envoy_cert_bound_token)
 
+### Exported Key Material
+
+Both the client and server will print the common [Exported Key Material rfc5705](https://www.rfc-editor.org/rfc/rfc5705.html) from the established [ConnectionState.ExportKeyingMaterial](https://pkg.go.dev/crypto/tls#ConnectionState.ExportKeyingMaterial).  This can be used for binding.
+
+
+The net result is you should get the same per-conn data on both ends of the connection
+
+```bash
+$ go run server/server.go 
+Starting Server..
+EKM my_nonce: 1efe1f9d73fcaefb59d10a898592759c6a1bae792f8fbfce80ca7db72202e06b   <<<<<<<<<<<<<<<
+
+$ go run client/client.go --serverName tee.collaborator1.com --serverCertRootCA ca1/root-ca.crt --clientCert ca1/client.crt --clientKey ca1/client.key
+EKM my_nonce: 1efe1f9d73fcaefb59d10a898592759c6a1bae792f8fbfce80ca7db72202e06b   <<<<<<<<<<<<<<<
+```
+
 ### SSL KeyLog
 
 If you want to see the decrypted tls traces using wireshark, enable the `SSLKEYLOGFILE` writer within the `TLSConfig`

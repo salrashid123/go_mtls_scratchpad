@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"flag"
 	"fmt"
@@ -43,6 +44,14 @@ type event struct {
 // middleware to extract the mtls client certificate
 func eventsMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		ekm, err := r.TLS.ExportKeyingMaterial("my_nonce", nil, 32)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		fmt.Printf("EKM my_nonce: %s\n", hex.EncodeToString(ekm))
+
 		event := &event{
 			PeerCertificates: r.TLS.PeerCertificates,
 		}
