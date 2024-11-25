@@ -25,6 +25,12 @@ Sample client/server application which does the following:
 
 11. Server will optionally invoke an external OCSP request to verify live that the client certificate presented has not been revoked
 
+
+---
+
+For gRPC, the tests here only verifies against ca1 but demonstrates the [AdvancedTLS](https://pkg.go.dev/google.golang.org/grpc/security/advancedtls) package.   You can find the examples under the `grpc` folder
+
+
 ---
 
 also see
