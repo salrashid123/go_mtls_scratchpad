@@ -165,7 +165,7 @@ also see
 
 #### OCSP Check
 
-The server can also make an OCSP API call to verify the client' certificates revocation status at runtime.
+The server  can also make an OCSP API call to verify the client' certificates revocation status at runtime.
 
 To use this, you need to run an ocsp server which in the following is trough `openssl`
 
@@ -229,6 +229,61 @@ OCSP Response Data:
     Next Update: Apr 27 12:20:54 2023 GMT
 
 ```
+
+#### OCSP Staple and CRL
+
+If you would rather see a self-contained end-to-end example for *BOTH* the client and server ocsp staple and CRL checks, see `ocsp_full/` folder
+
+Unlike the other examples, this folder uses its own client/server and CA:
+
+to use
+
+- start and OCSP Server
+
+```bash
+cd ocsp_full/
+openssl ocsp -index ca_scratchpad/ca/root-ca/db/root-ca.db -port 9999 \
+ -rsigner ca_scratchpad/certs/ocsp.crt -rkey ca_scratchpad/certs/ocsp.key \
+  -CA ca_scratchpad/ca/root-ca.crt -text -ndays 3500
+```
+
+Now run the server with a valid OCSP response and CRL checks.  THe following will read the server key and cert, will read fhe following defaults
+
+```golang
+	serverCert         = flag.String("serverCert", "ca_scratchpad/certs/http.crt", "Server TLS Cert")
+	serverKey          = flag.String("serverKey", "ca_scratchpad/certs/http.key", "Server TLS KEY")
+	rootCA             = flag.String("rootCA", "ca_scratchpad/ca/root-ca.crt", "RootCA")
+	ocspSigner         = flag.String("ocspSigner", "ca_scratchpad/certs/ocsp.crt", "OCSP SIgner")
+	ocspResponseStatic = flag.String("ocspResponseStatic", "ca_scratchpad/http_server_ocsp_resp_valid.bin", "OCSP Response Bytes")
+
+	crlFile = flag.String("crlFile", "ca_scratchpad/crl/root-ca-empty-valid.crl", "CRLFile to read")
+```
+
+Note, the default mode is where the server will actually contact the openssl ocsp server for the response.  I've left it commented out a mode where the server will read a static response from the file.
+
+The server will also read the CRL value to ensure that the client cert it sends is still valid
+
+```bash
+go run server/server.go
+```
+
+Now run the client.
+
+```golang
+	clientCert         = flag.String("clientCert", "ca_scratchpad/certs/client.crt", "Client TLS Cert")
+	clientKey          = flag.String("clientKey", "ca_scratchpad/certs/client.key", "Client TLS KEY")
+	rootCA             = flag.String("rootCA", "ca_scratchpad/ca/root-ca.crt", "RootCA")
+	ocspSigner         = flag.String("ocspSigner", "ca_scratchpad/certs/ocsp.crt", "OCSP SIgner")
+	ocspResponseStatic = flag.String("ocspResponseStatic", "ca_scratchpad/client_ocsp_resp_valid.bin", "OCSP Response Bytes")
+```
+
+The client will readk its keypair, then read the _static_ ocsp response from file (it could read from the ocsp server too)
+
+In the end *both* client and server will validate the certificated presented by using OCSP Stapling
+
+![images/server_ocsp.png](images/server_ocsp.png)
+
+![images/client_ocsp.png](images/client_ocsp.png)
 
 ---
 
