@@ -68,6 +68,10 @@ func main() {
 				return errors.New("certificate ocsp stale")
 			}
 
+			if ocspResp.Status != ocsp.Good {
+				return errors.New("ocsp status invalid")
+			}
+
 			return nil
 		},
 	}
