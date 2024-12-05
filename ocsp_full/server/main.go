@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -98,23 +99,14 @@ func main() {
 		panic("failed to decode PEM block")
 	}
 
-	ocspSignerPEM, err := os.ReadFile(*ocspSigner)
-	if err != nil {
-		panic(err)
-	}
-
-	ocspblock, _ := pem.Decode(ocspSignerPEM)
-	if rootblock == nil {
-		panic("failed to decode PEM block")
-	}
-
+	// read the crl
 	crlBytes, err := os.ReadFile(*crlFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	crlBlock, _ := pem.Decode(crlBytes)
-	if rootblock == nil {
+	if crlBlock == nil {
 		panic("failed to decode PEM block")
 	}
 
@@ -122,12 +114,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// ocspServerResponse, err := os.ReadFile(*ocspResponseStatic)
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return
-	// }
 
 	serverCert, err := x509.ParseCertificate(default_server_certs.Certificate[0])
 	if err != nil {
@@ -139,17 +125,17 @@ func main() {
 		panic(err)
 	}
 
-	ocspSignerCert, err := x509.ParseCertificate(ocspblock.Bytes)
-	if err != nil {
-		panic(err)
-	}
+	// create an ocsp request to validate the http server cert
 
-	cr, err := ocsp.CreateRequest(serverCert, ocspSignerCert, &ocsp.RequestOptions{})
+	cr, err := ocsp.CreateRequest(serverCert, root509Cert, &ocsp.RequestOptions{
+		Hash: crypto.SHA256,
+	})
 	if err != nil {
 		fmt.Printf("error creating request %v", err)
 		return
 	}
 
+	// make the request
 	or, err := http.NewRequest(http.MethodPost, "http://localhost:9999", bytes.NewBuffer(cr))
 	if err != nil {
 		panic(err)
@@ -161,6 +147,8 @@ func main() {
 	}
 
 	defer res.Body.Close()
+
+	// parse the response
 	ocspServerResponse, err := io.ReadAll(res.Body)
 	if err != nil {
 		panic(err)
@@ -173,6 +161,7 @@ func main() {
 	clientCaCertPool := x509.NewCertPool()
 	clientCaCertPool.AppendCertsFromPEM(clientCaCert)
 
+	// attach the ocsp response to the server cert
 	default_server_certs.OCSPStaple = ocspServerResponse
 
 	tlsConfig := &tls.Config{

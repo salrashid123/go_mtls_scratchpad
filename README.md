@@ -238,7 +238,7 @@ Unlike the other examples, this folder uses its own client/server and CA:
 
 to use
 
-- start and OCSP Server
+- (optional) start and OCSP Server
 
 ```bash
 cd ocsp_full/

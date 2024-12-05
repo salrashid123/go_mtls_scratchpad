@@ -27,6 +27,11 @@ func main() {
 
 	flag.Parse()
 
+	// read a static ocsp response form disk
+	// openssl ocsp -CA ca/root-ca.crt \
+	//    -CAfile ca_scratchpad/ca/root-ca.crt -issuer ca_scratchpad/ca/root-ca.crt \
+	//	-cert ca_scratchpad/certs/client.crt -url http://localhost:9999 -respout ca_scratchpad/client_ocsp_resp_valid.bin
+
 	client_ocsp, err := os.ReadFile(*ocspResponseStatic)
 	if err != nil {
 		log.Println(err)
@@ -49,6 +54,8 @@ func main() {
 		log.Println(err)
 		return
 	}
+
+	// attach the ocsp response to the cert
 	clientCerts.OCSPStaple = client_ocsp
 
 	tlsConfig := &tls.Config{
@@ -68,6 +75,7 @@ func main() {
 				return errors.New("certificate ocsp stale")
 			}
 
+			// verify the server's ocsp stapled response
 			if ocspResp.Status != ocsp.Good {
 				return errors.New("ocsp status invalid")
 			}

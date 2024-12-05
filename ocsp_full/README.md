@@ -1,18 +1,17 @@
 
 
 
-https://github.com/GoogleCloudPlatform/gcp-ca-service-ocsp
-
-wireshark trace.cap -otls.keylog_file:keylog.log
-
-https://github.com/salrashid123/envoy_mtls?tab=readme-ov-file#ca-setup
-
-
 
 ```bash
+### ocsp server
 openssl ocsp -index ca_scratchpad/ca/root-ca/db/root-ca.db -port 9999 \
  -rsigner ca_scratchpad/certs/ocsp.crt -rkey ca_scratchpad/certs/ocsp.key \
   -CA ca_scratchpad/ca/root-ca.crt -text -ndays 3500
+
+### ocsp client
+openssl ocsp -CA ca/root-ca.crt  -CAfile ca_scratchpad/ca/root-ca.crt \
+   -issuer ca_scratchpad/ca/root-ca.crt \
+     -cert ca_scratchpad/certs/http.crt -url http://localhost:9999 -text
 ```
 
 
